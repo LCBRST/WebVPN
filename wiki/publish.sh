@@ -14,6 +14,19 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
+# Take the commit identity from the main repository's local config instead of
+# hardcoding one here. The wiki is a separate repository and does not inherit
+# that config, so it has to be passed through explicitly.
+name="$(git -C "$here/.." config --get user.name || true)"
+email="$(git -C "$here/.." config --get user.email || true)"
+name="${WIKI_GIT_NAME:-$name}"
+email="${WIKI_GIT_EMAIL:-$email}"
+if [ -z "$name" ] || [ -z "$email" ]; then
+  echo "Set user.name and user.email in the main repository, or provide" >&2
+  echo "WIKI_GIT_NAME and WIKI_GIT_EMAIL." >&2
+  exit 1
+fi
+
 git clone --quiet "$wiki_url" "$tmp/wiki"
 
 # Replace the managed pages. Anything else already in the wiki is left alone.
@@ -30,10 +43,7 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-# The wiki repository is separate and does not inherit the main repo's local
-# identity, so supply one here rather than relying on a global git config.
-git -c "user.name=${WIKI_GIT_NAME:-LCBRST}" \
-    -c "user.email=${WIKI_GIT_EMAIL:-LCBRST@users.noreply.github.com}" \
+git -c "user.name=$name" -c "user.email=$email" \
     commit --quiet -m "Sync wiki from main repository"
 git push --quiet
 echo "wiki updated: https://github.com/LCBRST/WebVPN/wiki"
