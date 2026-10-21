@@ -1,0 +1,56 @@
+[Unit]
+Description=WebVPN reverse proxy for internal web services
+Documentation=https://github.com/LCBRST/webvpn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Needs a matching system user: useradd --system --no-create-home --shell /usr/sbin/nologin webvpn
+User=webvpn
+Group=webvpn
+
+# The LAN index listens on port 80, which is privileged, and this unit runs as
+# an unprivileged user. CapabilityBoundingSet has to name the capability as
+# well or the ambient one gets stripped again.
+#
+# Do not reach for setcap instead: NoNewPrivileges below makes the kernel
+# ignore file capabilities, so that route fails silently.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+WorkingDirectory=/opt/webvpn
+ExecStart=/opt/webvpn/webvpn -config /opt/webvpn/config.yaml
+Restart=on-failure
+RestartSec=5
+
+# The process writes exactly one thing: the state file that holds the service
+# list, the user list and the access rules. Everything else -- the config, the
+# binary -- is still read-only. The signing key is read once at startup;
+# rotating it means editing the config and restarting.
+#
+# StateDirectory creates /var/lib/webvpn, hands it to User/Group with the mode
+# below, and adds it to the writable set that ProtectSystem=strict would
+# otherwise deny. Doing it by hand would mean a mkdir and a chown in the install
+# steps, and a mode that drifts.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+# 0700, not the default 0755: this directory holds bcrypt hashes for every
+# account and the access rules for every service.
+StateDirectory=webvpn
+StateDirectoryMode=0700
+
+[Install]
+WantedBy=multi-user.target

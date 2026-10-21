@@ -1,0 +1,189 @@
+# webvpn configuration.
+#
+# Copy to config.yaml and fill in. Unknown keys are a startup error, so typos
+# do not silently do nothing.
+
+server:
+  # Loopback only. cloudflared runs on this machine and is the only thing that
+  # needs to reach us; binding wider would put the login page on the LAN and
+  # make the tunnel's forwarding headers spoofable.
+  listen: "127.0.0.1:8080"
+
+  # The domain services live under. See the note on certificates below.
+  base_domain: "example.com"
+
+  # Where the login page and service index live. Wildcard tunnel rules do not
+  # match the apex, so this needs its own DNS record and ingress rule.
+  portal_host: "vpn.example.com"
+
+  # What the browser uses. Keep this https in production; http is only for
+  # testing through a hosts-file entry.
+  public_scheme: "https"
+
+  # Services running on the same machine as this proxy are normal, so loopback
+  # targets are allowed. Turn this off if everything you proxy is elsewhere.
+  allow_loopback_targets: true
+
+  read_header_timeout: 10s
+  idle_timeout: 120s
+  # There is deliberately no write_timeout. It has to stay 0 or server-sent
+  # events and long-polls get cut off mid-stream.
+
+session:
+  cookie_name: "webvpn_session"
+  # Generate with: webvpn -genkey
+  # May also be supplied as WEBVPN_SESSION_SECRET, which keeps it out of
+  # backups and shell history.
+  signing_key: ""
+  ttl: 168h
+  refresh_after: 84h
+  # Bump this and restart to invalidate every session ever issued. This is the
+  # escape hatch that makes stateless cookies acceptable.
+  epoch: 1
+
+# Where the mutable state lives: the service list, the user list and who may
+# reach what. The admin page writes this file; it never rewrites config.yaml.
+#
+# Leave it out and it defaults to state.json next to this file, which is only
+# correct if that directory is writable. In production it is not --
+# ProtectSystem=strict makes /opt/webvpn read-only -- so the unit sets
+# StateDirectory=webvpn and push.py appends a state: block pointing here.
+#
+# The users: and services: below are the seed for this file. Once it exists
+# they are ignored, so somebody deleted through the admin page stays deleted
+# across restarts, and an account added down there will not appear.
+state:
+  path: "/var/lib/webvpn/state.json"
+
+users:
+  # Generate the hash with: webvpn -hash   (reads the password from stdin)
+  #
+  # admin: true is what grants access to the admin page. A user without it can
+  # log into the portal but is refused at the admin login form.
+  #
+  # Exactly one is needed to start with. If nobody has it, the first user in
+  # this list is promoted at startup and a warning is logged, so that the admin
+  # page has an owner. Promote your real account and demote that one.
+  - name: "admin"
+    password_hash: "$2a$12$replace-me-with-the-output-of-webvpn--hash"
+    admin: true
+    # Optional per-user allowlist of service subdomains, used only when this
+    # list seeds the state file. After that the admin page is the place to edit
+    # it, and the seed grants every user every service regardless of what is
+    # written here -- an upgrade must not silently revoke access.
+    services: []
+
+login:
+  attempts_per_minute: 5
+  # Only one password comparison at a time. bcrypt is ~250ms of CPU each, so
+  # this is what keeps a burst of POSTs from saturating the machine.
+  max_concurrent: 1
+  # Failure lockout, per client address. After max_failures wrong passwords
+  # inside failure_window the address is refused for lockout; every further
+  # lockout without a successful login in between doubles the period, capped at
+  # max_lockout. The state is server-side, so refreshing the page and trying
+  # again does not clear it. IPv6 clients are counted per /64.
+  max_failures: 5
+  failure_window: 15m
+  lockout: 15m
+  max_lockout: 4h
+
+# A second listener for use from inside the network. It serves two things and
+# nothing else:
+#
+#   /        the same service index, unauthenticated, linking to each service
+#            directly instead of through the tunnel
+#   /admin   the admin page, which needs a login and only admits admin users
+#
+# Neither can reach the proxy or a backend. Binding this to a LAN address is
+# what keeps both off the internet; the code refuses non-private clients as a
+# backstop, but the bind address is the real control.
+#
+# Note that the admin page speaks plain HTTP on this port, so its session
+# cookie crosses the LAN in the clear. That is the cost of keeping it off the
+# internet.
+lan_index:
+  # Empty turns the listener off, which is what this file ships with. Set it to
+  # a LAN address such as "192.168.1.5:80" to switch it on.
+  #
+  # Bind the LAN address, NOT 0.0.0.0. On a machine that also has a public
+  # address, 0.0.0.0 puts the list of everything you run in front of anyone who
+  # asks for it. (The code refuses non-private clients as a backstop, but the
+  # bind address is the real control.)
+  #
+  # Port 80 is below 1024, so the systemd unit needs CAP_NET_BIND_SERVICE --
+  # see deploy/webvpn.service. Use a high port here instead if you would rather
+  # not grant it.
+  listen: ""
+
+  # A browser on another machine resolves 127.0.0.1 to *itself*, so a service
+  # that targets loopback would be a dead link on this page. Setting this swaps
+  # the host of any such link for one the LAN can reach, keeping the port.
+  # Required as soon as one service targets loopback; unused otherwise.
+  host: ""
+
+# The seed service list. See the note on state: above -- add services through
+# the admin page day to day; this is what a fresh install starts from.
+services:
+  - name: "路由器"
+    subdomain: "router-vpn"
+    target: "http://192.168.1.1"
+    description: "OpenWrt / LuCI"
+    # Set when the backend serves https with a self-signed certificate.
+    insecure_tls: false
+    # Host name to send for the TLS handshake, for vhost-style https backends.
+    tls_server_name: ""
+    # false: the backend sees its own host (what appliances usually expect).
+    # true: the backend sees the public host name.
+    preserve_host: false
+    # Turn off for appliances that use X-Forwarded-For for their own IP
+    # allowlist, which would otherwise see a public address and return 403.
+    send_xff: true
+    strip_session_cookie: true
+    rewrite_location: true
+    # Extra host names the backend redirects to that mean "me". A router that
+    # redirects to router.lan, Grafana to localhost:3000.
+    extra_location_hosts: ["router.lan"]
+    fix_cors: false
+    # Some apps validate the request's Origin against their own host and reject
+    # anything else. Over the tunnel the backend sees "http://<its host>" while
+    # the browser sent "https://<public host>", so the check fails -- usually
+    # only on the WebSocket handshake, which shows up as a page that loads but
+    # never connects to the backend. Setting this makes the backend see its own
+    # origin. fix_cors does not cover this: that one rewrites a response header.
+    # It also tells the backend a cross-site request is same-origin, which is
+    # what its CSRF check looks at, so enable it only for a trusted service.
+    rewrite_origin: false
+    # Shown on the portal card. A good place to record per-service quirks.
+    note: ""
+
+  - name: "NAS"
+    subdomain: "nas-vpn"
+    target: "http://192.168.1.10:5000"
+    description: "Synology DSM"
+    insecure_tls: false
+    preserve_host: false
+    send_xff: true
+    strip_session_cookie: true
+    rewrite_location: true
+    extra_location_hosts: []
+    fix_cors: false
+    note: "登录后若反复跳回登录页，检查 DSM 的「信任的代理服务器」设置"
+
+# ---------------------------------------------------------------------------
+# Certificates: read this before choosing subdomain names.
+#
+# Cloudflare's free Universal SSL covers example.com and *.example.com, which is
+# exactly one label deep. So router-vpn.example.com (named above) is covered,
+# but router.vpn.example.com is not: it is two labels under the apex, the edge
+# has no certificate to present, and the handshake fails with
+# ERR_SSL_VERSION_OR_CIPHER_MISMATCH.
+#
+# cloudflared's wildcard ingress rule will happily route a two-label name, so
+# "the tunnel works" is not the test. Load it in a browser and check the
+# certificate chain.
+#
+# To use two-label names, either add Advanced Certificate Manager (paid, signs
+# *.vpn.example.com automatically) or upload a custom wildcard certificate.
+# With ACM, set base_domain to vpn.example.com and the same subdomains above
+# become router-vpn.vpn.example.com -- adjust the subdomain values accordingly.

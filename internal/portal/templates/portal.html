@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>内网服务 · WebVPN</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #fff;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --line: #e3e6ea;
+    --accent: #2f6feb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --panel: #1e2127;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --line: #2e323a;
+      --accent: #5b8dfa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 56rem; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.75rem;
+  }
+  h1 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; }
+  .who { color: var(--muted); font-size: .875rem; }
+  .who a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .who a:hover { color: var(--text); }
+  ul { list-style: none; margin: 0; padding: 0;
+       display: grid; gap: .875rem;
+       grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+  li { background: var(--panel); border: 1px solid var(--line);
+       border-radius: 12px; overflow: hidden; }
+  a.card {
+    display: block;
+    padding: 1.1rem 1.15rem;
+    color: inherit;
+    text-decoration: none;
+    height: 100%;
+  }
+  a.card:hover { border-color: var(--accent); }
+  a.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .name { font-weight: 600; margin-bottom: .2rem; }
+  .desc { color: var(--muted); font-size: .875rem; }
+  .note {
+    margin: .75rem 0 0;
+    padding-top: .65rem;
+    border-top: 1px dashed var(--line);
+    color: var(--muted);
+    font-size: .8125rem;
+  }
+  .note::before { content: "注意 "; font-weight: 600; }
+  .empty { color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>内网服务</h1>
+      {{if .LAN}}
+      <p class="who">内网直连 · 免登录</p>
+      {{else}}
+      <p class="who">{{.User}} · <a href="/logout">退出登录</a></p>
+      {{end}}
+    </header>
+
+    {{if .Services}}
+    <ul>
+      {{range .Services}}
+      <li>
+        <a class="card" href="{{.URL}}">
+          <div class="name">{{.Name}}</div>
+          {{if .Description}}<div class="desc">{{.Description}}</div>{{end}}
+          {{if .Note}}<p class="note">{{.Note}}</p>{{end}}
+        </a>
+      </li>
+      {{end}}
+    </ul>
+    {{else}}
+    <p class="empty">还没有配置任何服务。</p>
+    {{end}}
+  </div>
+</body>
+</html>

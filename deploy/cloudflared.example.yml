@@ -1,0 +1,45 @@
+# cloudflared configuration for the WebVPN tunnel.
+#
+# Install to /etc/cloudflared/config.yml on the machine that runs webvpn:
+#
+#   cloudflared tunnel login
+#   cloudflared tunnel create webvpn
+#   cloudflared tunnel route dns webvpn "vpn.example.com"
+#   cloudflared tunnel route dns webvpn "*-vpn.example.com"
+#   cloudflared tunnel ingress validate
+#   cloudflared tunnel ingress rule https://router-vpn.example.com
+#   sudo cloudflared service install
+#
+# Replace <tunnel-id> and the domain before use.
+
+tunnel: <tunnel-id>
+credentials-file: /etc/cloudflared/<tunnel-id>.json
+
+ingress:
+  # The portal. A wildcard rule does not match the apex, so this needs its own
+  # entry and its own DNS record.
+  - hostname: "vpn.example.com"
+    service: http://127.0.0.1:8080
+
+  # Service subdomains. These are one label under the apex, so Cloudflare's
+  # free Universal SSL certificate covers them.
+  #
+  # cloudflared itself would happily route a deeper name like
+  # router.vpn.example.com through this same rule, but the certificate would
+  # not cover it and the browser would fail the handshake before any traffic
+  # arrived. Certificate depth, not ingress matching, is the limit.
+  - hostname: "*-vpn.example.com"
+    service: http://127.0.0.1:8080
+
+  # Required catch-all.
+  - service: http_status:404
+
+# Cloudflare-side settings that also need checking, none of which live in this
+# file:
+#
+#   * A Cache Rule setting Bypass cache for these hostnames. Without it the
+#     edge can serve one session's page to another request.
+#   * Rocket Loader, Auto Minify and Email Obfuscation all OFF. They rewrite
+#     HTML and JavaScript, and against older appliance admin panels that shows
+#     up as a page that loads but whose buttons do nothing.
+#   * Always Use HTTPS ON.

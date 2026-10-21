@@ -1,0 +1,2 @@
+# push.py only. The Go server has no Python runtime dependency.
+paramiko>=3.4

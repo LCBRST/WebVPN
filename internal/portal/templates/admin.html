@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>管理 · WebVPN</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #fff;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --line: #e3e6ea;
+    --accent: #2f6feb;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --ok: #1a7f45;
+    --ok-bg: #e8f5ed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --panel: #1e2127;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --line: #2e323a;
+      --accent: #5b8dfa;
+      --danger: #f2a9a3;
+      --danger-bg: #3a1f1d;
+      --ok: #78d3a0;
+      --ok-bg: #1b3226;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+  }
+  h1 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; }
+  .who { color: var(--muted); font-size: .875rem; margin: 0; }
+  .who a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .who a:hover { color: var(--text); }
+
+  h2 {
+    margin: 2.25rem 0 .9rem;
+    font-size: 1rem;
+    letter-spacing: -.01em;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  .banner { margin: 0 0 1rem; padding: .65rem .8rem; border-radius: 8px; font-size: .875rem; }
+  .banner.err { background: var(--danger-bg); color: var(--danger); }
+  .banner.ok { background: var(--ok-bg); color: var(--ok); }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.1rem 1.15rem;
+  }
+
+  /* --- forms ------------------------------------------------------------ */
+  label.field {
+    display: block; margin-bottom: .8rem;
+    font-size: .8125rem; font-weight: 600; color: var(--muted);
+  }
+  input[type=text], input[type=password], textarea {
+    display: block; width: 100%; margin-top: .3rem;
+    padding: .55rem .65rem;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--text);
+    font: inherit; font-size: .9375rem;
+  }
+  textarea { resize: vertical; min-height: 2.6rem; }
+  input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent;
+  }
+  .grid {
+    display: grid; gap: 0 .9rem;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+  .actions { display: flex; align-items: center; gap: .75rem; margin-top: .35rem; }
+  .actions a { color: var(--muted); font-size: .8125rem; text-decoration: none; }
+  .actions a:hover { color: var(--text); }
+
+  button {
+    padding: .55rem .9rem; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.07); }
+  button:active { filter: brightness(.94); }
+  button:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+  button.ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  button.ghost:hover { color: var(--danger); border-color: currentColor; filter: none; }
+  button.ghost:disabled:hover { color: var(--muted); border-color: var(--line); }
+
+  /* --- service table ---------------------------------------------------- */
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line); }
+  th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.mono, code {
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: .8125rem; word-break: break-all;
+  }
+  td.rowactions { white-space: nowrap; }
+  td.rowactions form { display: inline; margin-left: .5rem; }
+  td.rowactions a { color: var(--accent); text-decoration: none; font-size: .8125rem; }
+  td.rowactions a:hover { text-decoration: underline; }
+  .tablewrap { overflow-x: auto; }
+
+  /* --- users ------------------------------------------------------------ */
+  ul.users { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  li.user { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.15rem; }
+  .userhead { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .9rem; }
+  .uname { font-weight: 600; }
+  .badge {
+    font-size: .75rem; padding: .1rem .45rem; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);
+  }
+  .badge.muted { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+  .userrow { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+  .userrow form { display: flex; align-items: center; gap: .5rem; margin: 0; }
+  .userrow input[type=password] { width: 13rem; margin-top: 0; }
+
+  .access { margin-top: 1rem; padding-top: .9rem; border-top: 1px dashed var(--line); }
+  .acl { margin: 0 0 .6rem; font-size: .8125rem; color: var(--muted); }
+  .grants { display: flex; flex-wrap: wrap; gap: .4rem .9rem; margin-bottom: .8rem; }
+  label.grant {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .875rem; color: var(--text); cursor: pointer;
+  }
+  label.grant input { margin: 0; }
+  .empty { color: var(--muted); font-size: .875rem; }
+  .hint { color: var(--muted); font-size: .8125rem; margin: .5rem 0 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>内网管理</h1>
+      <p class="who">
+        {{.User}} ·
+        <a href="/">服务列表</a> ·
+        <a href="/admin/logout">退出</a>
+      </p>
+    </header>
+
+    {{if .Error}}<p class="banner err" role="alert">{{.Error}}</p>{{end}}
+    {{if .Notice}}<p class="banner ok">{{.Notice}}</p>{{end}}
+
+    <h2>站点</h2>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr><th>名称</th><th>子域名</th><th>后端</th><th></th></tr>
+        </thead>
+        <tbody>
+          {{range .Services}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td class="mono">{{.Subdomain}}</td>
+            <td class="mono">{{.Target}}</td>
+            <td class="rowactions">
+              <a href="/admin?edit={{.Subdomain}}">编辑</a>
+              <form method="post" action="/admin/services">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="subdomain" value="{{.Subdomain}}">
+                <button class="ghost" type="submit">删除</button>
+              </form>
+            </td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="empty">还没有配置任何站点。</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+
+    <h2>{{if .Editing}}编辑站点{{else}}添加站点{{end}}</h2>
+    <div class="panel">
+      <form method="post" action="/admin/services" autocomplete="off">
+        <input type="hidden" name="action" value="save">
+        {{/* The subdomain the record had before this edit. Renaming a site means
+             changing this field's value, and the handler uses it to find the row
+             to replace rather than appending a second one. */}}
+        <input type="hidden" name="original" value="{{if .Editing}}{{.Editing.Subdomain}}{{end}}">
+
+        <div class="grid">
+          <label class="field">名称
+            <input type="text" name="name" required value="{{if .Editing}}{{.Editing.Name}}{{end}}">
+          </label>
+          <label class="field">子域名
+            <input type="text" name="subdomain" required placeholder="ollama-vpn"
+                   autocapitalize="none" spellcheck="false"
+                   value="{{if .Editing}}{{.Editing.Subdomain}}{{end}}">
+          </label>
+          <label class="field">后端地址
+            <input type="text" name="target" required placeholder="http://192.168.1.50:11434"
+                   autocapitalize="none" spellcheck="false"
+                   value="{{if .Editing}}{{.Editing.Target}}{{end}}">
+          </label>
+          <label class="field">描述
+            <input type="text" name="description" value="{{if .Editing}}{{.Editing.Description}}{{end}}">
+          </label>
+        </div>
+        <label class="field">备注
+          <textarea name="note">{{if .Editing}}{{.Editing.Note}}{{end}}</textarea>
+        </label>
+
+        <div class="actions">
+          <button type="submit">{{if .Editing}}保存修改{{else}}添加{{end}}</button>
+          <a href="/admin">取消</a>
+        </div>
+        <p class="hint">
+          子域名只能是数字、小写字母和连字符，会成为
+          <code>{{if .Editing}}{{.Editing.Subdomain}}{{else}}&lt;子域名&gt;{{end}}.{{.BaseDomain}}</code>
+          这个公网入口。
+          其它高级开关（自签证书、保留 Host、改写 Origin 等）不走这个表单，
+          编辑时也不会被覆盖。
+        </p>
+      </form>
+    </div>
+
+    <h2>用户</h2>
+    <ul class="users">
+      {{range .Users}}
+      <li class="user">
+        <div class="userhead">
+          <span class="uname">{{.Name}}</span>
+          {{if .Admin}}<span class="badge">管理员</span>{{end}}
+          {{if .Self}}<span class="badge muted">当前登录</span>{{end}}
+        </div>
+
+        <div class="userrow">
+          <form method="post" action="/admin/users">
+            <input type="hidden" name="action" value="admin">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <input type="hidden" name="admin" value="{{if .Admin}}false{{else}}true{{end}}">
+            {{/* Disabled on your own row: dropping your own flag is how you
+                 would lose the page you are standing on. */}}
+            <button class="ghost" type="submit" {{if .Self}}disabled
+                    title="不能取消自己的管理员身份"{{end}}>
+              {{if .Admin}}取消管理员{{else}}设为管理员{{end}}
+            </button>
+          </form>
+
+          <form method="post" action="/admin/users">
+            <input type="hidden" name="action" value="password">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <input type="password" name="password" required minlength="8"
+                   placeholder="新密码" autocomplete="new-password">
+            <button type="submit">改密码</button>
+          </form>
+
+          <form method="post" action="/admin/users">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <button class="ghost" type="submit" {{if .Self}}disabled
+                    title="不能删除自己"{{end}}>删除</button>
+          </form>
+        </div>
+
+        <form method="post" action="/admin/access" class="access">
+          <input type="hidden" name="name" value="{{.Name}}">
+          <p class="acl">
+            可访问的站点
+            {{if .Admin}}——管理员默认全部可访问，这里的勾选在取消管理员之后才生效{{end}}
+          </p>
+          {{if .Access}}
+          <div class="grants">
+            {{range .Access}}
+            <label class="grant">
+              <input type="checkbox" name="grant" value="{{.Subdomain}}" {{if .Granted}}checked{{end}}>
+              {{.Label}}
+            </label>
+            {{end}}
+          </div>
+          {{else}}
+          <p class="empty">还没有任何站点可分配。</p>
+          {{end}}
+          <button type="submit">保存权限</button>
+        </form>
+      </li>
+      {{end}}
+    </ul>
+
+    <h2>添加用户</h2>
+    <div class="panel">
+      <form method="post" action="/admin/users" autocomplete="off">
+        <input type="hidden" name="action" value="add">
+        <div class="grid">
+          <label class="field">用户名
+            <input type="text" name="name" required autocapitalize="none" spellcheck="false">
+          </label>
+          <label class="field">密码
+            <input type="password" name="password" required minlength="8"
+                   autocomplete="new-password">
+          </label>
+        </div>
+        <label class="grant">
+          <input type="checkbox" name="admin" value="true">
+          设为管理员
+        </label>
+        <div class="actions">
+          <button type="submit">添加</button>
+        </div>
+        <p class="hint">
+          新用户默认<b>不能访问任何站点</b>，添加后在下面的用户卡片里勾选。
+        </p>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

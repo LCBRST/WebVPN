@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>管理登录 · WebVPN</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --panel: #fff;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --line: #e3e6ea;
+    --accent: #2f6feb;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --panel: #1e2127;
+      --text: #e8eaed;
+      --muted: #9aa1ac;
+      --line: #2e323a;
+      --accent: #5b8dfa;
+      --danger: #f2a9a3;
+      --danger-bg: #3a1f1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .card {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 2rem;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px rgb(0 0 0 / .06);
+  }
+  h1 { margin: 0; font-size: 1.375rem; letter-spacing: -.01em; }
+  .sub { margin: .35rem 0 1.5rem; color: var(--muted); font-size: .875rem; }
+  .error {
+    margin: 0 0 1rem;
+    padding: .6rem .75rem;
+    border-radius: 8px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: .875rem;
+  }
+  .notice {
+    margin: 0 0 1rem;
+    padding: .6rem .75rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--text);
+    font-size: .875rem;
+  }
+  label {
+    display: block;
+    margin-bottom: .9rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  input {
+    display: block;
+    width: 100%;
+    margin-top: .35rem;
+    padding: .6rem .7rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: .9375rem;
+  }
+  input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+  button {
+    width: 100%;
+    margin-top: .5rem;
+    padding: .65rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.07); }
+  button:active { filter: brightness(.94); }
+  .back {
+    display: block;
+    margin-top: 1.1rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: .8125rem;
+    text-decoration: none;
+  }
+  .back:hover { color: var(--text); }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1>内网管理</h1>
+    <p class="sub">仅限局域网访问</p>
+
+    {{if .Error}}<p class="error" role="alert">{{.Error}}</p>{{end}}
+    {{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
+
+    <form method="post" action="/admin/login" autocomplete="on">
+      <label>
+        用户名
+        <input name="username" autocomplete="username" autocapitalize="none"
+               autocorrect="off" spellcheck="false" required autofocus>
+      </label>
+      <label>
+        密码
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">登录</button>
+    </form>
+
+    <a class="back" href="/">← 返回服务列表</a>
+  </main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Local deployment config. Holds the session signing key and password hashes;
+# config.example.yaml is the tracked template.
+/config.yaml
+
+# Runtime state written by the admin page (users, services, access rules).
+/state.json
+
+# SSH credentials used by push.py. Never commit this.
+/creds.json
+.env
+
+# Timestamped backups made by push.py and by hand.
+*.bak-*
+
+# Build output.
+/webvpn
+/webvpn.exe
+/webvpn-linux-*
+/dist/
+*.test
+
+# Python.
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editors / OS.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
