@@ -30,6 +30,10 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-git commit --quiet -m "Sync wiki from main repository"
+# The wiki repository is separate and does not inherit the main repo's local
+# identity, so supply one here rather than relying on a global git config.
+git -c "user.name=${WIKI_GIT_NAME:-LCBRST}" \
+    -c "user.email=${WIKI_GIT_EMAIL:-LCBRST@users.noreply.github.com}" \
+    commit --quiet -m "Sync wiki from main repository"
 git push --quiet
 echo "wiki updated: https://github.com/LCBRST/WebVPN/wiki"
